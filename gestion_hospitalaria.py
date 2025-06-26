@@ -505,30 +505,133 @@ class HospitalApp:
             enfermeras = st.session_state.datos_procesados['enfermeras']
             transferencias_contenido = st.session_state.contenidos['transferencias']
 
-            col1, col2 = st.columns(2)
+            tab1, tab2 = st.tabs(["📤 Ofrecer/Aceptar Transferencias", "📜 Historial Completo"])
 
-            with col1:
-                st.subheader("📤 Ofrecer Enfermera")
-                with st.form("form_servicio"):
-                    servicio_origen = st.selectbox(
-                        "Seleccione servicio de origen:",
-                        sorted(servicios['Servicio'].unique()),
-                        key="servicio_origen_select"
-                    )
+            with tab1:
+                col1, col2 = st.columns(2)
 
-                    if st.form_submit_button("🔃 Cargar Enfermeras del Servicio"):
-                        st.session_state.servicio_seleccionado = servicio_origen
-                        st.rerun()
+                with col1:
+                    st.subheader("📤 Ofrecer Enfermera")
+                    with st.form("form_servicio"):
+                        servicio_origen = st.selectbox(
+                            "Seleccione servicio de origen:",
+                            sorted(servicios['Servicio'].unique()),
+                            key="servicio_origen_select"
+                        )
 
-                if hasattr(st.session_state, 'servicio_seleccionado'):
-                    servicio_actual = st.session_state.servicio_seleccionado
-                    st.markdown(f"**Servicio seleccionado:** {servicio_actual}")
+                        if st.form_submit_button("🔃 Cargar Enfermeras del Servicio"):
+                            st.session_state.servicio_seleccionado = servicio_origen
+                            st.rerun()
 
-                    enfermeras_filtradas = enfermeras[
-                        (enfermeras['Servicio'] == servicio_actual) &
-                        (enfermeras['Presente'] == True) &
-                        (enfermeras['Disponible'] == True)
-                    ].copy()
+                    if hasattr(st.session_state, 'servicio_seleccionado'):
+                        servicio_actual = st.session_state.servicio_seleccionado
+                        st.markdown(f"**Servicio seleccionado:** {servicio_actual}")
+
+                        enfermeras_filtradas = enfermeras[
+                            (enfermeras['Servicio'] == servicio_actual) &
+                            (enfermeras['Presente'] == True) &
+                            (enfermeras['Disponible'] == True)
+                        ].copy()
+
+                        if transferencias_contenido:
+                            try:
+                                df_transferencias = pd.read_csv(io.StringIO(transferencias_contenido))
+                                df_transferencias = df_transferencias.rename(columns={
+                                    'Tumo_Origen': 'Turno_Origen',
+                                    'Tumo_Destino': 'Turno_Destino'
+                                })
+                                transferencias_pendientes = df_transferencias[df_transferencias['Estado'] == "Pendiente"]
+                                enfermeras_en_transferencia = transferencias_pendientes['ID_Enfermera'].unique()
+                                enfermeras_filtradas = enfermeras_filtradas[~enfermeras_filtradas['ID'].isin(enfermeras_en_transferencia)]
+                            except Exception as e:
+                                logger.warning(f"Error al leer transferencias: {str(e)}")
+
+                        with st.form("form_oferta"):
+                            if not enfermeras_filtradas.empty:
+                                opciones_enfermeras = [
+                                    f"{row['ID']} - {row['Nombre']} ({row['Turno']})"
+                                    for _, row in enfermeras_filtradas.iterrows()
+                                ]
+
+                                enfermera_seleccionada = st.selectbox(
+                                    "Enfermeras disponibles:",
+                                    opciones_enfermeras,
+                                    key=f"enfermeras_disponibles_{servicio_actual}"
+                                )
+
+                                servicios_destino = [s for s in sorted(servicios['Servicio'].unique())
+                                               if s != servicio_actual]
+                                servicio_destino = st.selectbox(
+                                    "Seleccione servicio destino:",
+                                    servicios_destino,
+                                    key="servicio_destino_select"
+                                )
+
+                                turnos_destino = ['Mañana', 'Tarde', 'Noche']
+                                turno_destino = st.selectbox(
+                                    "Seleccione turno destino:",
+                                    turnos_destino,
+                                    key="turno_destino_select"
+                                )
+
+                                password = st.text_input(
+                                    f"Contraseña para {servicio_actual}:",
+                                    type="password",
+                                    key="password_oferta"
+                                )
+
+                                if st.form_submit_button("📤 Ofrecer Transferencia"):
+                                    if self.validar_credenciales(servicio_actual, password):
+                                        id_enfermera = int(enfermera_seleccionada.split(" - ")[0])
+                                        enfermera_data = enfermeras[enfermeras['ID'] == id_enfermera].iloc[0]
+
+                                        nueva_transferencia = {
+                                            'ID_Enfermera': id_enfermera,
+                                            'Nombre_Enfermera': enfermera_data['Nombre'],
+                                            'Servicio_Origen': servicio_actual,
+                                            'Turno_Origen': enfermera_data['Turno'],
+                                            'Servicio_Destino': servicio_destino,
+                                            'Turno_Destino': turno_destino,
+                                            'Estado': "Pendiente",
+                                            'Fecha_Oferta': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                        }
+
+                                        if transferencias_contenido:
+                                            try:
+                                                df_transferencias = pd.read_csv(io.StringIO(transferencias_contenido))
+                                                df_transferencias = df_transferencias.rename(columns={
+                                                    'Tumo_Origen': 'Turno_Origen',
+                                                    'Tumo_Destino': 'Turno_Destino'
+                                                })
+                                            except:
+                                                df_transferencias = pd.DataFrame(columns=[
+                                                    'ID_Enfermera', 'Nombre_Enfermera', 'Servicio_Origen',
+                                                    'Turno_Origen', 'Servicio_Destino', 'Turno_Destino',
+                                                    'Estado', 'Fecha_Oferta'
+                                                ])
+                                        else:
+                                            df_transferencias = pd.DataFrame(columns=[
+                                                'ID_Enfermera', 'Nombre_Enfermera', 'Servicio_Origen',
+                                                'Turno_Origen', 'Servicio_Destino', 'Turno_Destino',
+                                                'Estado', 'Fecha_Oferta'
+                                            ])
+
+                                        df_transferencias = pd.concat(
+                                            [df_transferencias, pd.DataFrame([nueva_transferencia])],
+                                            ignore_index=True
+                                        )
+
+                                        if self.guardar_archivo_remoto(df_transferencias, 'transferencias'):
+                                            st.success("✅ Transferencia ofrecida exitosamente!")
+                                            time.sleep(1)
+                                            st.rerun()
+                                    else:
+                                        st.error("❌ Contraseña incorrecta para este servicio")
+                            else:
+                                st.warning(f"⚠️ No hay enfermeras disponibles en {servicio_actual}")
+
+                with col2:
+                    st.subheader("✅ Aceptar Transferencia")
 
                     if transferencias_contenido:
                         try:
@@ -537,172 +640,73 @@ class HospitalApp:
                                 'Tumo_Origen': 'Turno_Origen',
                                 'Tumo_Destino': 'Turno_Destino'
                             })
+
                             transferencias_pendientes = df_transferencias[df_transferencias['Estado'] == "Pendiente"]
-                            enfermeras_en_transferencia = transferencias_pendientes['ID_Enfermera'].unique()
-                            enfermeras_filtradas = enfermeras_filtradas[~enfermeras_filtradas['ID'].isin(enfermeras_en_transferencia)]
-                        except Exception as e:
-                            logger.warning(f"Error al leer transferencias: {str(e)}")
 
-                    with st.form("form_oferta"):
-                        if not enfermeras_filtradas.empty:
-                            opciones_enfermeras = [
-                                f"{row['ID']} - {row['Nombre']} ({row['Turno']})"
-                                for _, row in enfermeras_filtradas.iterrows()
-                            ]
-
-                            enfermera_seleccionada = st.selectbox(
-                                "Enfermeras disponibles:",
-                                opciones_enfermeras,
-                                key=f"enfermeras_disponibles_{servicio_actual}"
-                            )
-
-                            servicios_destino = [s for s in sorted(servicios['Servicio'].unique())
-                                           if s != servicio_actual]
-                            servicio_destino = st.selectbox(
-                                "Seleccione servicio destino:",
-                                servicios_destino,
-                                key="servicio_destino_select"
-                            )
-
-                            turnos_destino = ['Mañana', 'Tarde', 'Noche']
-                            turno_destino = st.selectbox(
-                                "Seleccione turno destino:",
-                                turnos_destino,
-                                key="turno_destino_select"
-                            )
-
-                            password = st.text_input(
-                                f"Contraseña para {servicio_actual}:",
-                                type="password",
-                                key="password_oferta"
-                            )
-
-                            if st.form_submit_button("📤 Ofrecer Transferencia"):
-                                if self.validar_credenciales(servicio_actual, password):
-                                    id_enfermera = int(enfermera_seleccionada.split(" - ")[0])
-                                    enfermera_data = enfermeras[enfermeras['ID'] == id_enfermera].iloc[0]
-
-                                    nueva_transferencia = {
-                                        'ID_Enfermera': id_enfermera,
-                                        'Nombre_Enfermera': enfermera_data['Nombre'],
-                                        'Servicio_Origen': servicio_actual,
-                                        'Turno_Origen': enfermera_data['Turno'],
-                                        'Servicio_Destino': servicio_destino,
-                                        'Turno_Destino': turno_destino,
-                                        'Estado': "Pendiente",
-                                        'Fecha_Oferta': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                    }
-
-                                    if transferencias_contenido:
-                                        try:
-                                            df_transferencias = pd.read_csv(io.StringIO(transferencias_contenido))
-                                            df_transferencias = df_transferencias.rename(columns={
-                                                'Tumo_Origen': 'Turno_Origen',
-                                                'Tumo_Destino': 'Turno_Destino'
-                                            })
-                                        except:
-                                            df_transferencias = pd.DataFrame(columns=[
-                                                'ID_Enfermera', 'Nombre_Enfermera', 'Servicio_Origen',
-                                                'Turno_Origen', 'Servicio_Destino', 'Turno_Destino',
-                                                'Estado', 'Fecha_Oferta'
-                                            ])
-                                    else:
-                                        df_transferencias = pd.DataFrame(columns=[
-                                            'ID_Enfermera', 'Nombre_Enfermera', 'Servicio_Origen',
-                                            'Turno_Origen', 'Servicio_Destino', 'Turno_Destino',
-                                            'Estado', 'Fecha_Oferta'
-                                        ])
-
-                                    df_transferencias = pd.concat(
-                                        [df_transferencias, pd.DataFrame([nueva_transferencia])],
-                                        ignore_index=True
+                            if not transferencias_pendientes.empty:
+                                with st.form("form_seleccion_transferencia"):
+                                    transferencia_seleccionada = st.selectbox(
+                                        "Transferencias pendientes:",
+                                        transferencias_pendientes.apply(
+                                            lambda x: f"{x['Nombre_Enfermera']} ({x['Turno_Origen']}) de {x['Servicio_Origen']} a {x['Servicio_Destino']} ({x['Turno_Destino']})",
+                                            axis=1
+                                        ),
+                                        key="transferencia_select"
                                     )
 
-                                    if self.guardar_archivo_remoto(df_transferencias, 'transferencias'):
-                                        st.success("✅ Transferencia ofrecida exitosamente!")
-                                        time.sleep(1)
+                                    if st.form_submit_button("🔍 Cargar Detalles"):
+                                        st.session_state.transferencia_seleccionada = transferencia_seleccionada
                                         st.rerun()
-                                else:
-                                    st.error("❌ Contraseña incorrecta para este servicio")
-                        else:
-                            st.warning(f"⚠️ No hay enfermeras disponibles en {servicio_actual}")
 
-            with col2:
-                st.subheader("✅ Aceptar Transferencia")
+                                if hasattr(st.session_state, 'transferencia_seleccionada'):
+                                    idx = transferencias_pendientes.index[
+                                        transferencias_pendientes.apply(
+                                            lambda x: f"{x['Nombre_Enfermera']} ({x['Turno_Origen']}) de {x['Servicio_Origen']} a {x['Servicio_Destino']} ({x['Turno_Destino']})",
+                                            axis=1
+                                        ) == st.session_state.transferencia_seleccionada
+                                    ][0]
 
-                if transferencias_contenido:
-                    try:
-                        df_transferencias = pd.read_csv(io.StringIO(transferencias_contenido))
-                        df_transferencias = df_transferencias.rename(columns={
-                            'Tumo_Origen': 'Turno_Origen',
-                            'Tumo_Destino': 'Turno_Destino'
-                        })
+                                    transferencia = df_transferencias.iloc[idx]
+                                    servicio_destino = transferencia['Servicio_Destino']
+                                    turno_destino = transferencia['Turno_Destino']
+                                    id_enfermera = transferencia['ID_Enfermera']
 
-                        transferencias_pendientes = df_transferencias[df_transferencias['Estado'] == "Pendiente"]
+                                    with st.form("form_aceptacion"):
+                                        st.markdown(f"**Transferencia seleccionada:** {st.session_state.transferencia_seleccionada}")
 
-                        if not transferencias_pendientes.empty:
-                            with st.form("form_seleccion_transferencia"):
-                                transferencia_seleccionada = st.selectbox(
-                                    "Transferencias pendientes:",
-                                    transferencias_pendientes.apply(
-                                        lambda x: f"{x['Nombre_Enfermera']} ({x['Turno_Origen']}) de {x['Servicio_Origen']} a {x['Servicio_Destino']} ({x['Turno_Destino']})",
-                                        axis=1
-                                    ),
-                                    key="transferencia_select"
-                                )
+                                        password = st.text_input(
+                                            f"Contraseña para {servicio_destino}:",
+                                            type="password",
+                                            key="password_aceptacion"
+                                        )
 
-                                if st.form_submit_button("🔍 Cargar Detalles"):
-                                    st.session_state.transferencia_seleccionada = transferencia_seleccionada
-                                    st.rerun()
+                                        if st.form_submit_button("✅ Aceptar Transferencia"):
+                                            if self.validar_credenciales(servicio_destino, password):
+                                                df_transferencias.at[idx, 'Estado'] = "Aceptada"
+                                                df_transferencias.at[idx, 'Fecha_Aceptacion'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                            if hasattr(st.session_state, 'transferencia_seleccionada'):
-                                idx = transferencias_pendientes.index[
-                                    transferencias_pendientes.apply(
-                                        lambda x: f"{x['Nombre_Enfermera']} ({x['Turno_Origen']}) de {x['Servicio_Origen']} a {x['Servicio_Destino']} ({x['Turno_Destino']})",
-                                        axis=1
-                                    ) == st.session_state.transferencia_seleccionada
-                                ][0]
+                                                enfermeras.loc[
+                                                    enfermeras['ID'] == id_enfermera,
+                                                    ['Servicio', 'Turno']
+                                                ] = [servicio_destino, turno_destino]
 
-                                transferencia = df_transferencias.iloc[idx]
-                                servicio_destino = transferencia['Servicio_Destino']
-                                turno_destino = transferencia['Turno_Destino']
-                                id_enfermera = transferencia['ID_Enfermera']
+                                                if (self.guardar_archivo_remoto(df_transferencias, 'transferencias') and
+                                                    self.guardar_archivo_remoto(enfermeras, 'enfermeras')):
+                                                    with st.spinner("Actualizando datos..."):
+                                                        st.session_state.datos_cargados = False
+                                                        if self.cargar_datos_completos():
+                                                            st.success("✅ Transferencia aceptada exitosamente!")
+                                                            if hasattr(st.session_state, 'transferencia_seleccionada'):
+                                                                del st.session_state.transferencia_seleccionada
+                                                            time.sleep(1)
+                                                            st.rerun()
+                                            else:
+                                                st.error("❌ Contraseña incorrecta para este servicio")
+                        except Exception as e:
+                            st.error(f"Error al procesar transferencias: {str(e)}")
 
-                                with st.form("form_aceptacion"):
-                                    st.markdown(f"**Transferencia seleccionada:** {st.session_state.transferencia_seleccionada}")
-
-                                    password = st.text_input(
-                                        f"Contraseña para {servicio_destino}:",
-                                        type="password",
-                                        key="password_aceptacion"
-                                    )
-
-                                    if st.form_submit_button("✅ Aceptar Transferencia"):
-                                        if self.validar_credenciales(servicio_destino, password):
-                                            df_transferencias.at[idx, 'Estado'] = "Aceptada"
-                                            df_transferencias.at[idx, 'Fecha_Aceptacion'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                                            enfermeras.loc[
-                                                enfermeras['ID'] == id_enfermera,
-                                                ['Servicio', 'Turno']
-                                            ] = [servicio_destino, turno_destino]
-
-                                            if (self.guardar_archivo_remoto(df_transferencias, 'transferencias') and
-                                                self.guardar_archivo_remoto(enfermeras, 'enfermeras')):
-                                                with st.spinner("Actualizando datos..."):
-                                                    st.session_state.datos_cargados = False
-                                                    if self.cargar_datos_completos():
-                                                        st.success("✅ Transferencia aceptada exitosamente!")
-                                                        if hasattr(st.session_state, 'transferencia_seleccionada'):
-                                                            del st.session_state.transferencia_seleccionada
-                                                        time.sleep(1)
-                                                        st.rerun()
-                                        else:
-                                            st.error("❌ Contraseña incorrecta para este servicio")
-                    except Exception as e:
-                        st.error(f"Error al procesar transferencias: {str(e)}")
-
-                st.subheader("📜 Historial Reciente (Últimas 10 transferencias)")
+            with tab2:
+                st.subheader("📜 Historial Completo de Transferencias")
                 if transferencias_contenido:
                     try:
                         df_transferencias = pd.read_csv(io.StringIO(transferencias_contenido))
@@ -715,36 +719,61 @@ class HospitalApp:
                                        'Servicio_Destino', 'Turno_Destino', 'Nombre_Enfermera', 'Estado']
 
                         if all(col in df_transferencias.columns for col in required_cols):
-                            historial = df_transferencias[
-                                df_transferencias['Estado'] == "Aceptada"
-                            ].sort_values('Fecha_Oferta', ascending=False).head(10)
-
-                            if not historial.empty:
-                                st.dataframe(
-                                    historial[required_cols].rename(columns={
-                                        'Fecha_Oferta': 'Fecha',
-                                        'Servicio_Origen': 'Origen',
-                                        'Turno_Origen': 'Turno Origen',
-                                        'Servicio_Destino': 'Destino',
-                                        'Turno_Destino': 'Turno Destino',
-                                        'Nombre_Enfermera': 'Enfermera'
-                                    }),
-                                    height=400,
-                                    column_config={
-                                        "Fecha": st.column_config.DatetimeColumn(
-                                            "Fecha",
-                                            format="YYYY-MM-DD HH:mm:ss"
-                                        ),
-                                        "Origen": "Servicio Origen",
-                                        "Turno Origen": "Turno Origen",
-                                        "Destino": "Servicio Destino",
-                                        "Turno Destino": "Turno Destino",
-                                        "Enfermera": "Enfermera Transferida",
-                                        "Estado": "Estado"
-                                    }
+                            # Mostrar filtros
+                            col_filtro1, col_filtro2 = st.columns(2)
+                            
+                            with col_filtro1:
+                                filtro_estado = st.selectbox(
+                                    "Filtrar por estado:",
+                                    ["Todos"] + df_transferencias['Estado'].unique().tolist()
                                 )
-                            else:
-                                st.info("No hay historial de transferencias completadas")
+                                
+                            with col_filtro2:
+                                filtro_servicio = st.selectbox(
+                                    "Filtrar por servicio:",
+                                    ["Todos"] + sorted(df_transferencias['Servicio_Origen'].unique().tolist() + 
+                                                      df_transferencias['Servicio_Destino'].unique().tolist())
+                                )
+                            
+                            # Aplicar filtros
+                            df_filtrado = df_transferencias.copy()
+                            if filtro_estado != "Todos":
+                                df_filtrado = df_filtrado[df_filtrado['Estado'] == filtro_estado]
+                            
+                            if filtro_servicio != "Todos":
+                                df_filtrado = df_filtrado[
+                                    (df_filtrado['Servicio_Origen'] == filtro_servicio) | 
+                                    (df_filtrado['Servicio_Destino'] == filtro_servicio)
+                                ]
+                            
+                            # Ordenar por fecha
+                            df_filtrado = df_filtrado.sort_values('Fecha_Oferta', ascending=False)
+                            
+                            # Mostrar tabla completa con paginación
+                            st.dataframe(
+                                df_filtrado[required_cols].rename(columns={
+                                    'Fecha_Oferta': 'Fecha',
+                                    'Servicio_Origen': 'Origen',
+                                    'Turno_Origen': 'Turno Origen',
+                                    'Servicio_Destino': 'Destino',
+                                    'Turno_Destino': 'Turno Destino',
+                                    'Nombre_Enfermera': 'Enfermera'
+                                }),
+                                height=600,
+                                column_config={
+                                    "Fecha": st.column_config.DatetimeColumn(
+                                        "Fecha",
+                                        format="YYYY-MM-DD HH:mm:ss"
+                                    ),
+                                    "Origen": "Servicio Origen",
+                                    "Turno Origen": "Turno Origen",
+                                    "Destino": "Servicio Destino",
+                                    "Turno Destino": "Turno Destino",
+                                    "Enfermera": "Enfermera Transferida",
+                                    "Estado": "Estado"
+                                },
+                                use_container_width=True
+                            )
                         else:
                             st.error("El archivo de transferencias no tiene el formato correcto")
                             st.write("Columnas encontradas:", df_transferencias.columns.tolist())
@@ -756,7 +785,7 @@ class HospitalApp:
         except Exception as e:
             logger.error(f"Error en transferencias: {str(e)}")
             st.error(f"Error crítico: {str(e)}")
-
+            
     def run(self):
         """Función principal de la aplicación"""
         if not st.session_state.app_initialized:
