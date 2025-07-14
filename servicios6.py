@@ -530,57 +530,29 @@ def show_forms():
     st.markdown("---")
     st.markdown("## Dar de alta")
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### Nuevo Paciente")
-        with st.form(key="form_paciente"):
-            st.session_state.nuevo_nombre = st.text_input(
-                "Nombre completo:",
-                value=st.session_state.nuevo_nombre,
-                key="input_nombre_paciente"
-            )
-            
-            st.session_state.habitacion_nuevo = st.selectbox(
-                "Habitación:",
-                list(st.session_state.habitaciones.keys()),
-                key="select_habitacion_paciente"
-            )
-            
-            st.session_state.nuevo_diagnostico = st.text_input(
-                "Diagnóstico:",
-                value=st.session_state.nuevo_diagnostico,
-                key="input_diagnostico_paciente"
-            )
-            
-            if st.form_submit_button("Dar de alta paciente"):
-                st.session_state.tipo_nuevo = "paciente"
-                agregar_persona()
-    
-    with col2:
-        st.markdown("### Nueva Enfermera")
-        with st.form(key="form_enfermera"):
-            st.session_state.nuevo_nombre = st.text_input(
-                "Nombre completo:",
-                value=st.session_state.nuevo_nombre,
-                key="input_nombre_enfermera"
-            )
-            
-            st.session_state.habitacion_nuevo = st.selectbox(
-                "Habitación:",
-                list(st.session_state.habitaciones.keys()),
-                key="select_habitacion_enfermera"
-            )
-            
-            st.session_state.nuevo_rol = st.selectbox(
-                "Rol:",
-                ["Especialista", "General A", "General B", "General C", "Camillero"],
-                key="select_rol_enfermera"
-            )
-            
-            if st.form_submit_button("Dar de alta enfermera"):
-                st.session_state.tipo_nuevo = "enfermera"
-                agregar_persona()
+    st.markdown("### Nuevo Paciente")
+    with st.form(key="form_paciente"):
+        st.session_state.nuevo_nombre = st.text_input(
+            "Nombre completo:",
+            value=st.session_state.nuevo_nombre,
+            key="input_nombre_paciente"
+        )
+        
+        st.session_state.habitacion_nuevo = st.selectbox(
+            "Habitación:",
+            list(st.session_state.habitaciones.keys()),
+            key="select_habitacion_paciente"
+        )
+        
+        st.session_state.nuevo_diagnostico = st.text_input(
+            "Diagnóstico:",
+            value=st.session_state.nuevo_diagnostico,
+            key="input_diagnostico_paciente"
+        )
+        
+        if st.form_submit_button("Dar de alta paciente"):
+            st.session_state.tipo_nuevo = "paciente"
+            agregar_persona()
 
 def show_summary():
     """Muestra el resumen de movimientos al final de la página"""
