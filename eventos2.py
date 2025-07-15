@@ -73,7 +73,54 @@ def show_event_classification():
                 "Espasmo coronario",
                 "Disección coronaria"
             ],
-            # ... (otras subcategorías como en el código anterior)
+            "Arritmia": [
+                "Fibrilación Ventricular",
+                "Taquicardia Ventricular Sostenida",
+                "Bradiarritmia severa",
+                "Bloqueo AV completo"
+            ],
+            "Complicación Hemodinámica": [
+                "Shock cardiogénico",
+                "Taponamiento cardíaco",
+                "Insuficiencia cardíaca aguda",
+                "Hipotensión refractaria"
+            ],
+            "Complicación Vascular": [
+                "Hematoma acceso vascular",
+                "Pseudoaneurisma",
+                "Fístula arteriovenosa",
+                "Isquemia distal"
+            ],
+            "Evento Tromboembólico": [
+                "Trombosis de stent",
+                "Embolismo coronario",
+                "Accidente cerebrovascular",
+                "Tromboembolismo pulmonar"
+            ],
+            "Reacción a Medios de Contraste": [
+                "Nefropatía por contraste",
+                "Reacción alérgica leve",
+                "Reacción anafiláctica",
+                "Extravasación de contraste"
+            ],
+            "Infección Asociada": [
+                "Infección sitio acceso vascular",
+                "Endocarditis post-procedimiento",
+                "Sepsis relacionada a catéter",
+                "Infección de herida quirúrgica"
+            ],
+            "Falla de Equipo Crítico": [
+                "Falla de balón intra-aórtico",
+                "Malfunción de marcapasos",
+                "Problemas con ECMO",
+                "Falla en equipo de hemodinamia"
+            ],
+            "Error en Medicación Cardiovascular": [
+                "Sobredosis de anticoagulante",
+                "Error en trombolíticos",
+                "Administración incorrecta de antiarrítmicos",
+                "Omisión de medicación crítica"
+            ]
         }
 
         subcategoria = ""
@@ -131,13 +178,14 @@ def show_contributing_factors():
 def show_patient_data():
     """Muestra los datos del paciente"""
     with st.expander("👨‍⚕️ Datos del Paciente", expanded=False):
-        cols = st.columns(3)
+        cols = st.columns(2)
         paciente_data = {}
         with cols[0]:
+            paciente_data["nombre_completo"] = st.text_input("Nombre completo del paciente")
             paciente_data["edad"] = st.selectbox("Edad", ["", "<40", "40-65", ">65"])
-        with cols[1]:
             paciente_data["imc"] = st.selectbox("IMC", ["", "<25 (Normal)", "25-30 (Sobrepeso)", ">30 (Obeso)"])
-        with cols[2]:
+        with cols[1]:
+            paciente_data["numero_cama"] = st.text_input("Número de cama")
             paciente_data["riesgo_previo"] = st.selectbox("Riesgo pre-procedimiento", [
                 "",
                 "Bajo (0-2%)",
