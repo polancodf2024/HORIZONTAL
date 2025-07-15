@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, time
 import pandas as pd
 
 def setup_page():
@@ -194,6 +194,230 @@ def show_patient_data():
             ])
     return paciente_data
 
+def show_lab_results():
+    """Muestra los resultados de laboratorio (versión modificada con selección de exámenes)"""
+    with st.expander("🧪 Resultados de Laboratorio", expanded=False):
+        lab_data = {}
+        
+        # Selección de exámenes solicitados
+        examenes_solicitados = st.multiselect("Seleccione los exámenes solicitados:", [
+            "Glucosa",
+            "Troponina",
+            "Sodio",
+            "Potasio",
+            "Creatinina",
+            "BNP",
+            "pH arterial",
+            "Lactato",
+            "Gases arteriales",
+            "Hemograma completo",
+            "Pruebas de coagulación"
+        ])
+        
+        lab_data["examenes_solicitados"] = examenes_solicitados
+        
+        # Mostrar campos según exámenes seleccionados
+        if "Glucosa" in examenes_solicitados:
+            lab_data["glucosa"] = st.number_input("Glucosa (mg/dL)", min_value=0, max_value=1000, value=90)
+        
+        if "Troponina" in examenes_solicitados:
+            lab_data["troponina"] = st.number_input("Troponina (ng/mL)", min_value=0.0, max_value=100.0, value=0.01, step=0.01, format="%.2f")
+        
+        if "Sodio" in examenes_solicitados:
+            lab_data["sodio"] = st.number_input("Sodio (mEq/L)", min_value=100, max_value=200, value=140)
+        
+        if "Potasio" in examenes_solicitados:
+            lab_data["potasio"] = st.number_input("Potasio (mEq/L)", min_value=1.0, max_value=10.0, value=4.0, step=0.1, format="%.1f")
+        
+        if "Creatinina" in examenes_solicitados:
+            lab_data["creatinina"] = st.number_input("Creatinina (mg/dL)", min_value=0.1, max_value=20.0, value=0.8, step=0.1, format="%.1f")
+        
+        if "BNP" in examenes_solicitados:
+            lab_data["bnp"] = st.number_input("BNP (pg/mL)", min_value=0, max_value=5000, value=100)
+        
+        if "pH arterial" in examenes_solicitados:
+            lab_data["ph"] = st.number_input("pH arterial", min_value=6.5, max_value=8.0, value=7.4, step=0.01, format="%.2f")
+        
+        if "Lactato" in examenes_solicitados:
+            lab_data["lactato"] = st.number_input("Lactato (mmol/L)", min_value=0.0, max_value=20.0, value=1.0, step=0.1, format="%.1f")
+        
+        if "Gases arteriales" in examenes_solicitados:
+            st.markdown("**Gases Arteriales**")
+            gas_cols = st.columns(3)
+            with gas_cols[0]:
+                lab_data["pao2"] = st.number_input("PaO₂ (mmHg)", min_value=20, max_value=600, value=80)
+            with gas_cols[1]:
+                lab_data["paco2"] = st.number_input("PaCO₂ (mmHg)", min_value=10, max_value=150, value=40)
+            with gas_cols[2]:
+                lab_data["sao2"] = st.number_input("SaO₂ (%)", min_value=50, max_value=100, value=98)
+        
+        if "Hemograma completo" in examenes_solicitados:
+            st.markdown("**Hemograma**")
+            hemo_cols = st.columns(3)
+            with hemo_cols[0]:
+                lab_data["hb"] = st.number_input("Hemoglobina (g/dL)", min_value=3.0, max_value=25.0, value=12.0, step=0.1, format="%.1f")
+            with hemo_cols[1]:
+                lab_data["hto"] = st.number_input("Hematocrito (%)", min_value=10, max_value=80, value=36)
+            with hemo_cols[2]:
+                lab_data["plaquetas"] = st.number_input("Plaquetas (x10³/μL)", min_value=10, max_value=1000, value=200)
+        
+        if "Pruebas de coagulación" in examenes_solicitados:
+            st.markdown("**Coagulación**")
+            coag_cols = st.columns(3)
+            with coag_cols[0]:
+                lab_data["tp"] = st.number_input("TP (seg)", min_value=5, max_value=100, value=12)
+            with coag_cols[1]:
+                lab_data["inr"] = st.number_input("INR", min_value=0.5, max_value=10.0, value=1.0, step=0.1, format="%.1f")
+            with coag_cols[2]:
+                lab_data["ttpa"] = st.number_input("TTPa (seg)", min_value=20, max_value=200, value=30)
+    
+    return lab_data
+
+def show_medication_section():
+    """Muestra la sección de medicamentos y dosis (versión modificada con opciones de dosis)"""
+    with st.expander("💊 Medicamentos Involucrados", expanded=False):
+        medicamentos = []
+        
+        st.markdown("**Añadir medicamentos relacionados con el evento adverso**")
+        
+        # Configuración para múltiples medicamentos
+        num_medicamentos = st.number_input("Número de medicamentos a registrar", min_value=1, max_value=10, value=1)
+        
+        for i in range(num_medicamentos):
+            with st.container():
+                st.markdown(f"### Medicamento {i+1}")
+                cols = st.columns([2, 1, 1, 1])
+                
+                with cols[0]:
+                    nombre = st.selectbox(f"Nombre del medicamento {i+1}", [
+                        "",
+                        "Heparina",
+                        "Aspirina",
+                        "Clopidogrel",
+                        "Ticagrelor",
+                        "Enoxaparina",
+                        "Furosemida",
+                        "Amiodarona",
+                        "Dobutamina",
+                        "Noradrenalina",
+                        "Midazolam",
+                        "Otro"
+                    ], key=f"med_{i}_nombre")
+                    
+                    if nombre == "Otro":
+                        nombre = st.text_input(f"Especificar otro medicamento {i+1}", key=f"med_{i}_otro")
+                
+                with cols[1]:
+                    # Opciones de dosis según medicamento común
+                    if nombre == "Heparina":
+                        dosis = st.selectbox(f"Dosis {i+1}", [
+                            "",
+                            "5000 UI",
+                            "2500 UI",
+                            "1000 UI",
+                            "80 UI/kg",
+                            "60 UI/kg",
+                            "Otra dosis"
+                        ], key=f"med_{i}_dosis")
+                    elif nombre == "Enoxaparina":
+                        dosis = st.selectbox(f"Dosis {i+1}", [
+                            "",
+                            "40 mg",
+                            "60 mg",
+                            "80 mg",
+                            "1 mg/kg",
+                            "1.5 mg/kg",
+                            "Otra dosis"
+                        ], key=f"med_{i}_dosis")
+                    elif nombre == "Amiodarona":
+                        dosis = st.selectbox(f"Dosis {i+1}", [
+                            "",
+                            "150 mg",
+                            "300 mg",
+                            "5 mg/kg",
+                            "Otra dosis"
+                        ], key=f"med_{i}_dosis")
+                    elif nombre == "Noradrenalina":
+                        dosis = st.selectbox(f"Dosis {i+1}", [
+                            "",
+                            "0.05 mcg/kg/min",
+                            "0.1 mcg/kg/min",
+                            "0.2 mcg/kg/min",
+                            "0.5 mcg/kg/min",
+                            "Otra dosis"
+                        ], key=f"med_{i}_dosis")
+                    else:
+                        dosis = st.selectbox(f"Dosis {i+1}", [
+                            "",
+                            "5 mg",
+                            "10 mg",
+                            "25 mg",
+                            "50 mg",
+                            "75 mg",
+                            "100 mg",
+                            "Otra dosis"
+                        ], key=f"med_{i}_dosis")
+                    
+                    if dosis == "Otra dosis":
+                        dosis = st.text_input(f"Especificar otra dosis {i+1}", key=f"med_{i}_otra_dosis")
+                
+                with cols[2]:
+                    unidad = st.selectbox(f"Unidad {i+1}", [
+                        "mg",
+                        "UI",
+                        "mcg",
+                        "ml",
+                        "mg/kg",
+                        "UI/kg",
+                        "mcg/kg",
+                        "mcg/kg/min"
+                    ], key=f"med_{i}_unidad")
+                
+                with cols[3]:
+                    via = st.selectbox(f"Vía {i+1}", [
+                        "EV",
+                        "Oral",
+                        "SC",
+                        "Intraarterial",
+                        "Intracoronaria",
+                        "Inhalatoria"
+                    ], key=f"med_{i}_via")
+                
+                # Checkbox para indicar si hubo error en este medicamento
+                error_med = st.checkbox(f"¿Hubo error en la administración de este medicamento? {i+1}", key=f"med_{i}_error")
+                
+                if error_med:
+                    tipo_error = st.selectbox(f"Tipo de error {i+1}", [
+                        "",
+                        "Dosis incorrecta",
+                        "Medicamento equivocado",
+                        "Vía incorrecta",
+                        "Paciente equivocado",
+                        "Omisión de dosis",
+                        "Velocidad de infusión incorrecta"
+                    ], key=f"med_{i}_tipo_error")
+                    
+                    medicamentos.append({
+                        "nombre": nombre,
+                        "dosis": dosis,
+                        "unidad": unidad,
+                        "via": via,
+                        "error": True,
+                        "tipo_error": tipo_error
+                    })
+                else:
+                    medicamentos.append({
+                        "nombre": nombre,
+                        "dosis": dosis,
+                        "unidad": unidad,
+                        "via": via,
+                        "error": False
+                    })
+                
+                st.markdown("---")
+    
+    return medicamentos
+
 def show_management_section():
     """Muestra la sección de manejo del evento"""
     with st.expander("🚑 Manejo del Evento", expanded=False):
@@ -217,6 +441,42 @@ def show_management_section():
             ])
     return manejo
 
+def show_death_certificate():
+    """Muestra la sección de certificado de defunción"""
+    with st.expander("⚰️ Datos de Defunción (si aplica)", expanded=False):
+        death_data = {}
+        cols = st.columns(3)
+        
+        with cols[0]:
+            muerte = st.radio("¿Falleció el paciente?", ["No", "Sí"], horizontal=True)
+            death_data["fallecio"] = muerte == "Sí"
+            
+            if muerte == "Sí":
+                death_data["hora_defuncion"] = st.time_input("Hora de defunción", time(0, 0))
+        
+        with cols[1]:
+            if muerte == "Sí":
+                death_data["folio_certificado"] = st.text_input("Número de folio del certificado médico")
+                death_data["causa_muerte"] = st.selectbox("Causa principal de muerte", [
+                    "",
+                    "Infarto agudo de miocardio",
+                    "Choque cardiogénico",
+                    "Arritmia fatal",
+                    "Taponamiento cardíaco",
+                    "Embolia pulmonar masiva",
+                    "Accidente cerebrovascular",
+                    "Sepsis",
+                    "Otra causa cardiovascular",
+                    "Causa no cardiovascular"
+                ])
+        
+        with cols[2]:
+            if muerte == "Sí":
+                death_data["autopsia"] = st.radio("¿Se realizó autopsia?", ["No", "Sí"], horizontal=True)
+                death_data["obituario_patologia"] = st.text_input("Folio obituario (Patología)")
+    
+    return death_data
+
 def show_validation_section():
     """Muestra la sección de validación"""
     with st.expander("✍️ Validación del Reporte", expanded=False):
@@ -230,7 +490,7 @@ def show_validation_section():
             validacion["fecha_reporte"] = datetime.now().strftime("%d/%m/%Y %H:%M")
     return validacion
 
-def submit_report(context, classification, factors, patient, management, validation):
+def submit_report(context, classification, factors, patient, lab_results, medications, management, death_data, validation):
     """Procesa el envío del reporte"""
     if not classification["categoria_principal"]:
         st.error("❌ Debe seleccionar al menos la categoría principal del evento")
@@ -248,7 +508,10 @@ def submit_report(context, classification, factors, patient, management, validat
         **classification,
         "factores_contribuyentes": factors,
         "datos_paciente": patient,
+        "laboratorio": lab_results,
+        "medicamentos": medications,
         "manejo": management,
+        "datos_defuncion": death_data if death_data["fallecio"] else None,
         "validacion": validation
     }
     
@@ -285,12 +548,15 @@ def main():
     classification = show_event_classification()
     factors = show_contributing_factors()
     patient_data = show_patient_data()
+    lab_results = show_lab_results()
+    medications = show_medication_section()
     management = show_management_section()
+    death_data = show_death_certificate()
     validation = show_validation_section()
     
     # Botón de envío
     if st.button("📤 Enviar Reporte Cardiológico", type="primary", use_container_width=True):
-        submit_report(context, classification, factors, patient_data, management, validation)
+        submit_report(context, classification, factors, patient_data, lab_results, medications, management, death_data, validation)
     
     # Panel de supervisores
     show_supervisor_panel()
