@@ -4,7 +4,6 @@ import pandas as pd
 import os
 from PIL import Image
 import tempfile
-from audio_recorder_streamlit import audio_recorder as mic_recorder
 
 def setup_page():
     """Configura la página de Streamlit"""
@@ -450,26 +449,6 @@ def capture_image():
         return img
     return None
 
-def record_audio():
-    """Graba audio usando el micrófono (versión mejorada)"""
-    st.write("🎤 Grabar audio explicativo")
-
-    try:
-        audio_bytes = mic_recorder(
-            start_prompt="⏺️ Iniciar grabación",
-            stop_prompt="⏹️ Detener grabación",
-            just_once=True,  # Evita múltiples instancias
-            key="audio_recorder"
-        )
-
-        if audio_bytes is not None:
-            st.audio(audio_bytes, format="audio/wav")
-            return audio_bytes
-        return None
-
-    except Exception as e:
-        st.error(f"Error al grabar audio: {str(e)}")
-        return None
 
 def record_video():
     """Graba video usando la cámara de la tablet"""
@@ -487,7 +466,6 @@ def show_evidence_section():
         Capture evidencia relevante del evento adverso usando los dispositivos de la tablet:
         - Fotografías (ECG, heridas, equipos)
         - Videos cortos (monitorización, procedimientos)
-        - Grabaciones de audio (comunicaciones relevantes)
         """)
         
         evidence_data = {}
@@ -495,7 +473,6 @@ def show_evidence_section():
         opcion_evidencia = st.radio("Seleccione el tipo de evidencia a capturar:", [
             "Ninguno",
             "Tomar fotografía",
-            "Grabar audio",
             "Grabar video"
         ], horizontal=True)
         
@@ -506,15 +483,6 @@ def show_evidence_section():
                     "tipo": "foto",
                     "descripcion": st.text_input("Descripción de la foto")
                 }
-                
-        elif opcion_evidencia == "Grabar audio":
-            audio = record_audio()
-            if audio is not None:
-                evidence_data["audio"] = {
-                    "tipo": "audio",
-                    "descripcion": st.text_input("Descripción del audio")
-                }
-                
         elif opcion_evidencia == "Grabar video":
             video = record_video()
             if video is not None:
