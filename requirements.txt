@@ -7,3 +7,5 @@ pytz==2025.2
 protobuf==4.25.8
 pyarrow==20.0.0
 matplotlib==3.8.4  # Añadido para soportar background_gradient
+streamlit-mic-recorder==0.0.7
+Pillow==10.0.1
