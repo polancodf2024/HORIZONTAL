@@ -4,7 +4,7 @@ import pandas as pd
 import os
 from PIL import Image
 import tempfile
-from streamlit_mic_recorder import mic_recorder
+from audio_recorder_streamlit import audio_recorder as mic_recorder
 
 def setup_page():
     """Configura la página de Streamlit"""
