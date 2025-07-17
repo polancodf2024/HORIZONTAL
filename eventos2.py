@@ -1,6 +1,10 @@
 import streamlit as st
 from datetime import datetime, time
 import pandas as pd
+import os
+from PIL import Image
+import tempfile
+from streamlit_mic_recorder import mic_recorder
 
 def setup_page():
     """Configura la página de Streamlit"""
@@ -195,11 +199,10 @@ def show_patient_data():
     return paciente_data
 
 def show_lab_results():
-    """Muestra los resultados de laboratorio (versión modificada con selección de exámenes)"""
+    """Muestra los resultados de laboratorio"""
     with st.expander("🧪 Resultados de Laboratorio", expanded=False):
         lab_data = {}
         
-        # Selección de exámenes solicitados
         examenes_solicitados = st.multiselect("Seleccione los exámenes solicitados:", [
             "Glucosa",
             "Troponina",
@@ -216,7 +219,6 @@ def show_lab_results():
         
         lab_data["examenes_solicitados"] = examenes_solicitados
         
-        # Mostrar campos según exámenes seleccionados
         if "Glucosa" in examenes_solicitados:
             lab_data["glucosa"] = st.number_input("Glucosa (mg/dL)", min_value=0, max_value=1000, value=90)
         
@@ -274,13 +276,12 @@ def show_lab_results():
     return lab_data
 
 def show_medication_section():
-    """Muestra la sección de medicamentos y dosis (versión modificada con opciones de dosis)"""
+    """Muestra la sección de medicamentos y dosis"""
     with st.expander("💊 Medicamentos Involucrados", expanded=False):
         medicamentos = []
         
         st.markdown("**Añadir medicamentos relacionados con el evento adverso**")
         
-        # Configuración para múltiples medicamentos
         num_medicamentos = st.number_input("Número de medicamentos a registrar", min_value=1, max_value=10, value=1)
         
         for i in range(num_medicamentos):
@@ -308,7 +309,6 @@ def show_medication_section():
                         nombre = st.text_input(f"Especificar otro medicamento {i+1}", key=f"med_{i}_otro")
                 
                 with cols[1]:
-                    # Opciones de dosis según medicamento común
                     if nombre == "Heparina":
                         dosis = st.selectbox(f"Dosis {i+1}", [
                             "",
@@ -383,7 +383,6 @@ def show_medication_section():
                         "Inhalatoria"
                     ], key=f"med_{i}_via")
                 
-                # Checkbox para indicar si hubo error en este medicamento
                 error_med = st.checkbox(f"¿Hubo error en la administración de este medicamento? {i+1}", key=f"med_{i}_error")
                 
                 if error_med:
@@ -441,6 +440,84 @@ def show_management_section():
             ])
     return manejo
 
+def capture_image():
+    """Captura una imagen usando la cámara de la tablet"""
+    img_file = st.camera_input("📸 Tomar foto del evento adverso")
+    
+    if img_file is not None:
+        img = Image.open(img_file)
+        st.image(img, caption="Foto capturada", use_column_width=True)
+        return img
+    return None
+
+def record_audio():
+    """Graba audio usando el micrófono de la tablet"""
+    st.write("🎤 Grabar audio explicativo")
+    audio_bytes = mic_recorder(
+        start_prompt="⏺️ Iniciar grabación",
+        stop_prompt="⏹️ Detener grabación",
+        key="audio_recorder"
+    )
+    
+    if audio_bytes and 'bytes' in audio_bytes:
+        st.audio(audio_bytes['bytes'], format="audio/wav")
+        return audio_bytes['bytes']
+    return None
+
+def record_video():
+    """Graba video usando la cámara de la tablet"""
+    video_bytes = st.camera_input("🎥 Grabar video del evento", key="video_recorder")
+    
+    if video_bytes is not None:
+        st.video(video_bytes)
+        return video_bytes
+    return None
+
+def show_evidence_section():
+    """Muestra la sección para capturar evidencia multimedia usando la cámara y micrófono"""
+    with st.expander("📸 Evidencia Multimedia del Evento", expanded=False):
+        st.info("""
+        Capture evidencia relevante del evento adverso usando los dispositivos de la tablet:
+        - Fotografías (ECG, heridas, equipos)
+        - Videos cortos (monitorización, procedimientos)
+        - Grabaciones de audio (comunicaciones relevantes)
+        """)
+        
+        evidence_data = {}
+        
+        opcion_evidencia = st.radio("Seleccione el tipo de evidencia a capturar:", [
+            "Ninguno",
+            "Tomar fotografía",
+            "Grabar audio",
+            "Grabar video"
+        ], horizontal=True)
+        
+        if opcion_evidencia == "Tomar fotografía":
+            img = capture_image()
+            if img is not None:
+                evidence_data["imagen"] = {
+                    "tipo": "foto",
+                    "descripcion": st.text_input("Descripción de la foto")
+                }
+                
+        elif opcion_evidencia == "Grabar audio":
+            audio = record_audio()
+            if audio is not None:
+                evidence_data["audio"] = {
+                    "tipo": "audio",
+                    "descripcion": st.text_input("Descripción del audio")
+                }
+                
+        elif opcion_evidencia == "Grabar video":
+            video = record_video()
+            if video is not None:
+                evidence_data["video"] = {
+                    "tipo": "video",
+                    "descripcion": st.text_input("Descripción del video")
+                }
+    
+    return evidence_data
+
 def show_death_certificate():
     """Muestra la sección de certificado de defunción"""
     with st.expander("⚰️ Datos de Defunción (si aplica)", expanded=False):
@@ -490,7 +567,7 @@ def show_validation_section():
             validacion["fecha_reporte"] = datetime.now().strftime("%d/%m/%Y %H:%M")
     return validacion
 
-def submit_report(context, classification, factors, patient, lab_results, medications, management, death_data, validation):
+def submit_report(context, classification, factors, patient, lab_results, medications, management, death_data, validation, evidence):
     """Procesa el envío del reporte"""
     if not classification["categoria_principal"]:
         st.error("❌ Debe seleccionar al menos la categoría principal del evento")
@@ -502,7 +579,6 @@ def submit_report(context, classification, factors, patient, lab_results, medica
     
     codigo_reporte = f"CARD-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     
-    # Aquí iría la lógica para guardar en base de datos
     report_data = {
         **context,
         **classification,
@@ -511,15 +587,15 @@ def submit_report(context, classification, factors, patient, lab_results, medica
         "laboratorio": lab_results,
         "medicamentos": medications,
         "manejo": management,
+        "evidencia_multimedia": evidence,
         "datos_defuncion": death_data if death_data["fallecio"] else None,
         "validacion": validation
     }
     
     st.success(f"✅ Reporte enviado correctamente! Código: {codigo_reporte}")
     
-    # Mostrar resumen
     with st.expander("📄 Resumen del Reporte", expanded=True):
-        st.json(report_data)  # Alternativa: st.dataframe(pd.DataFrame.from_dict(report_data))
+        st.json(report_data)
     
     return True
 
@@ -529,7 +605,6 @@ def show_supervisor_panel():
         st.markdown("---")
         st.subheader("📊 Panel de Análisis Cardiológico (Solo Supervisores)")
         
-        # Datos de ejemplo
         kpi_data = pd.DataFrame({
             "Tipo de Evento": ["Isquémico", "Arritmia", "Vascular", "Tromboembólico"],
             "Casos (30d)": [12, 8, 5, 3],
@@ -540,10 +615,8 @@ def show_supervisor_panel():
 
 def main():
     """Función principal de la aplicación"""
-    # Configuración inicial
     setup_page()
     
-    # Mostrar secciones del formulario
     context = show_event_context()
     classification = show_event_classification()
     factors = show_contributing_factors()
@@ -551,14 +624,13 @@ def main():
     lab_results = show_lab_results()
     medications = show_medication_section()
     management = show_management_section()
+    evidence = show_evidence_section()
     death_data = show_death_certificate()
     validation = show_validation_section()
     
-    # Botón de envío
     if st.button("📤 Enviar Reporte Cardiológico", type="primary", use_container_width=True):
-        submit_report(context, classification, factors, patient_data, lab_results, medications, management, death_data, validation)
+        submit_report(context, classification, factors, patient_data, lab_results, medications, management, death_data, validation, evidence)
     
-    # Panel de supervisores
     show_supervisor_panel()
 
 if __name__ == "__main__":
