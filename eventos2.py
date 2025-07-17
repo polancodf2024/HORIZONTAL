@@ -8,12 +8,11 @@ import tempfile
 def setup_page():
     """Configura la página de Streamlit"""
     st.set_page_config(
-        page_title="🚨 Reporte Cardiológico de Eventos Adversos",
+        page_title="🚨 Reporte de Eventos Graves y Adversos",
         layout="wide",
         page_icon="❤️"
     )
-    st.title("❤️‍🩹 Reporte Estructurado de Eventos Adversos Cardiológicos")
-    st.markdown("**Instituto de Cardiología - Sistema estandarizado para UCIC, Hemodinamia y Cirugía Cardiovascular**")
+    st.title("❤️‍🩹 Reporte de Eventos Adversos y Graves")
 
 def show_event_context():
     """Muestra la sección de contexto del evento"""
@@ -54,8 +53,8 @@ def show_event_context():
     }
 
 def show_event_classification():
-    """Muestra la clasificación del evento adverso"""
-    with st.expander("⚠️ Clasificación del Evento Adverso", expanded=True):
+    """Muestra la clasificación del evento grave o adverso"""
+    with st.expander("⚠️ Clasificación del Evento Grave o  Adverso", expanded=True):
         categoria_principal = st.selectbox("🔍 Tipo principal de evento", [
             "",
             "Complicación Isquémica",
@@ -279,7 +278,7 @@ def show_medication_section():
     with st.expander("💊 Medicamentos Involucrados", expanded=False):
         medicamentos = []
         
-        st.markdown("**Añadir medicamentos relacionados con el evento adverso**")
+        st.markdown("**Añadir medicamentos relacionados con el evento grave o adverso**")
         
         num_medicamentos = st.number_input("Número de medicamentos a registrar", min_value=1, max_value=10, value=1)
         
@@ -441,7 +440,7 @@ def show_management_section():
 
 def capture_image():
     """Captura una imagen usando la cámara de la tablet"""
-    img_file = st.camera_input("📸 Tomar foto del evento adverso")
+    img_file = st.camera_input("📸 Tomar foto del evento grave o adverso")
     
     if img_file is not None:
         img = Image.open(img_file)
@@ -463,7 +462,7 @@ def show_evidence_section():
     """Muestra la sección para capturar evidencia multimedia usando la cámara y micrófono"""
     with st.expander("📸 Evidencia Multimedia del Evento", expanded=False):
         st.info("""
-        Capture evidencia relevante del evento adverso usando los dispositivos de la tablet:
+        Capture evidencia relevante del evento grave o adverso usando los dispositivos de la tablet:
         - Fotografías (ECG, heridas, equipos)
         - Videos cortos (monitorización, procedimientos)
         """)
