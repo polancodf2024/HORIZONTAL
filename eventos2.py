@@ -451,18 +451,25 @@ def capture_image():
     return None
 
 def record_audio():
-    """Graba audio usando el micrófono de la tablet"""
+    """Graba audio usando el micrófono (versión mejorada)"""
     st.write("🎤 Grabar audio explicativo")
-    audio_bytes = mic_recorder(
-        start_prompt="⏺️ Iniciar grabación",
-        stop_prompt="⏹️ Detener grabación",
-        key="audio_recorder"
-    )
-    
-    if audio_bytes and 'bytes' in audio_bytes:
-        st.audio(audio_bytes['bytes'], format="audio/wav")
-        return audio_bytes['bytes']
-    return None
+
+    try:
+        audio_bytes = mic_recorder(
+            start_prompt="⏺️ Iniciar grabación",
+            stop_prompt="⏹️ Detener grabación",
+            just_once=True,  # Evita múltiples instancias
+            key="audio_recorder"
+        )
+
+        if audio_bytes is not None:
+            st.audio(audio_bytes, format="audio/wav")
+            return audio_bytes
+        return None
+
+    except Exception as e:
+        st.error(f"Error al grabar audio: {str(e)}")
+        return None
 
 def record_video():
     """Graba video usando la cámara de la tablet"""
