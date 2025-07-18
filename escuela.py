@@ -136,7 +136,7 @@ def mostrar_sidebar():
     with st.sidebar:
         try:
             logo = Image.open('escudo_COLOR.jpg')
-            st.image(logo, use_container_width=True)
+            st.image(logo, use_column_width=True)
         except FileNotFoundError:
             st.warning("Logo no encontrado")
         
